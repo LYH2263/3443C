@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         verbose="true"
+         stopOnFailure="false"
+         cacheResult="false"
+         backupGlobals="false"
+         backupStaticAttributes="false">
+
+    <php>
+        <env name="APP_DEBUG" value="true"/>
+        <env name="DATABASE_DRIVER" value="sqlite"/>
+        <env name="DB_PATH" value="tests/_data/testing.db"/>
+        <env name="JWT_SECRET" value="flipbook_test_secret_key_for_unit_tests_only"/>
+    </php>
+
+    <testsuites>
+        <testsuite name="Integration">
+            <directory suffix="Test.php">tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <listeners>
+        <listener class="PHPUnit\TextUI\DefaultResultPrinter"/>
+    </listeners>
+</phpunit>

@@ -13,9 +13,18 @@
         "firebase/php-jwt": "^6.0",
         "intervention/image": "^2.7"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "topthink/think-testing": "^3.0"
+    },
     "autoload": {
         "psr-4": {
             "app\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "tests\\": "tests/"
         }
     },
     "config": {
@@ -32,6 +41,8 @@
     "scripts": {
         "post-autoload-dump": [
             "@php think service:discover"
-        ]
+        ],
+        "test": "phpunit --colors=always",
+        "test:integration": "phpunit --testsuite Integration --colors=always"
     }
 }
