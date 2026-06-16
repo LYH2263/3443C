@@ -20,9 +20,10 @@ class AlbumPageController
         $pages = AlbumPage::where('album_id', $albumId)
             ->order('page_number', 'asc')
             ->select()
-            ->each(function ($page) {
-                $page->image_url = $page->image ? get_upload_url($page->image) : '';
-                return $page;
+            ->map(function ($page) {
+                $pageData = $page->toArray();
+                $pageData['image_url'] = $page->image_url;
+                return $pageData;
             });
 
         return json_success($pages);
@@ -58,11 +59,12 @@ class AlbumPageController
         $page->sort_order = $data['sort_order'] ?? 0;
         $page->save();
 
-        $page->image_url = get_upload_url($page->image);
+        $pageData = $page->toArray();
+        $pageData['image_url'] = $page->image_url;
 
         Log::info("添加画册页面: Album ID {$albumId}, Page {$page->page_number} by user {$request->uid}");
 
-        return json_success($page, '页面添加成功');
+        return json_success($pageData, '页面添加成功');
     }
 
     public function update(Request $request, $albumId, $id)
@@ -82,11 +84,13 @@ class AlbumPageController
         }
 
         $page->save();
-        $page->image_url = get_upload_url($page->image);
+
+        $pageData = $page->toArray();
+        $pageData['image_url'] = $page->image_url;
 
         Log::info("更新画册页面: Album ID {$albumId}, Page ID {$id} by user {$request->uid}");
 
-        return json_success($page, '页面更新成功');
+        return json_success($pageData, '页面更新成功');
     }
 
     public function delete(Request $request, $albumId, $id)

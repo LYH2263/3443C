@@ -24,12 +24,15 @@ class DashboardController
         $recentAlbums = Album::with(['category'])
             ->order('created_at', 'desc')
             ->limit(5)
-            ->select()
-            ->each(function ($item) {
-                $item->cover_image_url = $item->cover_image ? get_upload_url($item->cover_image) : '';
-                $item->page_count = AlbumPage::where('album_id', $item->id)->count();
-                return $item;
-            });
+            ->select();
+
+        Album::loadPageCount($recentAlbums);
+
+        $recentAlbums = $recentAlbums->map(function ($item) {
+            $data = $item->toArray();
+            $data['cover_image_url'] = $item->cover_image_url;
+            return $data;
+        });
 
         $recentUsers = User::order('created_at', 'desc')
             ->limit(5)

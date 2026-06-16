@@ -23,4 +23,9 @@ class AlbumPage extends Model
     {
         return $this->belongsTo(Album::class, 'album_id', 'id');
     }
+
+    public function getImageUrlAttr()
+    {
+        return $this->image ? get_upload_url($this->image) : '';
+    }
 }

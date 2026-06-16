@@ -38,14 +38,13 @@ class AlbumController
         $list = $query->order('sort_order', 'asc')
             ->order('id', 'desc')
             ->page($page, $limit)
-            ->select()
-            ->each(function ($item) {
-                $item->cover_image_url = $item->cover_image ? get_upload_url($item->cover_image) : '';
-                $item->background_image_url = $item->background_image ? get_upload_url($item->background_image) : '';
-                $item->qrcode_image_url = $item->qrcode_image ? get_upload_url($item->qrcode_image) : '';
-                $item->page_count = AlbumPage::where('album_id', $item->id)->count();
-                return $item;
-            });
+            ->select();
+
+        Album::loadPageCount($list);
+
+        $list = $list->map(function ($item) {
+            return $item->toAdminList();
+        });
 
         return json_success([
             'list'  => $list,
@@ -93,15 +92,13 @@ class AlbumController
         $list = $query->order('sort_order', 'asc')
             ->order('id', 'desc')
             ->page($page, $limit)
-            ->select()
-            ->each(function ($item) {
-                $item->cover_image_url = $item->cover_image ? get_upload_url($item->cover_image) : '';
-                $item->background_image_url = $item->background_image ? get_upload_url($item->background_image) : '';
-                $item->has_password = !empty($item->share_password);
-                $item->page_count = AlbumPage::where('album_id', $item->id)->count();
-                unset($item->share_password);
-                return $item;
-            });
+            ->select();
+
+        Album::loadPageCount($list);
+
+        $list = $list->map(function ($item) {
+            return $item->toPublicList();
+        });
 
         return json_success([
             'list'  => $list,
@@ -118,17 +115,14 @@ class AlbumController
             return json_error('画册不存在', 404);
         }
 
-        $album->cover_image_url = $album->cover_image ? get_upload_url($album->cover_image) : '';
-        $album->background_image_url = $album->background_image ? get_upload_url($album->background_image) : '';
-        $album->qrcode_image_url = $album->qrcode_image ? get_upload_url($album->qrcode_image) : '';
-        $album->qrcode_logo_url = $album->qrcode_logo ? get_upload_url($album->qrcode_logo) : '';
-
-        $pages = $album->pages->each(function ($page) {
-            $page->image_url = $page->image ? get_upload_url($page->image) : '';
-            return $page;
+        $data = $album->toAdminDetail();
+        $data['pages'] = $album->pages->map(function ($page) {
+            $pageData = $page->toArray();
+            $pageData['image_url'] = $page->image_url;
+            return $pageData;
         });
 
-        return json_success($album);
+        return json_success($data);
     }
 
     public function publicDetail(Request $request, $id)
@@ -175,9 +169,9 @@ class AlbumController
             return json_success([
                 'need_password' => true,
                 'album'         => [
-                    'id'    => $album->id,
-                    'title' => $album->title,
-                    'cover_image_url' => $album->cover_image ? get_upload_url($album->cover_image) : '',
+                    'id'              => $album->id,
+                    'title'           => $album->title,
+                    'cover_image_url' => $album->cover_image_url,
                 ],
             ], '请输入分享密码');
         }
@@ -195,9 +189,10 @@ class AlbumController
         $pages = AlbumPage::where('album_id', $id)
             ->order('page_number', 'asc')
             ->select()
-            ->each(function ($page) {
-                $page->image_url = $page->image ? get_upload_url($page->image) : '';
-                return $page;
+            ->map(function ($page) {
+                $pageData = $page->toArray();
+                $pageData['image_url'] = $page->image_url;
+                return $pageData;
             });
 
         return json_success([
@@ -206,9 +201,9 @@ class AlbumController
                 'id'                   => $album->id,
                 'title'                => $album->title,
                 'description'          => $album->description,
-                'cover_image_url'      => $album->cover_image ? get_upload_url($album->cover_image) : '',
-                'background_image_url' => $album->background_image ? get_upload_url($album->background_image) : '',
-                'qrcode_image_url'     => $album->qrcode_image ? get_upload_url($album->qrcode_image) : '',
+                'cover_image_url'      => $album->cover_image_url,
+                'background_image_url' => $album->background_image_url,
+                'qrcode_image_url'     => $album->qrcode_image_url,
                 'qrcode_text_line1'    => $album->qrcode_text_line1,
                 'qrcode_text_line2'    => $album->qrcode_text_line2,
                 'category'             => $album->category,
