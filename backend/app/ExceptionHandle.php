@@ -2,6 +2,7 @@
 
 namespace app;
 
+use app\log\AppLogger;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\ModelNotFoundException;
 use think\exception\Handle;
@@ -23,16 +24,37 @@ class ExceptionHandle extends Handle
 
     public function report(Throwable $exception): void
     {
+        if (!$this->isIgnoreReport($exception)) {
+            $request = request();
+            $context = [
+                'request_id'    => $request->request_id ?? ($GLOBALS['_request_id'] ?? ''),
+                'http_method'   => $request ? $request->method() : '',
+                'http_url'      => $request ? $request->url() : '',
+                'http_ip'       => $request ? $request->ip() : '',
+                'user_id'       => $request->uid ?? null,
+                'username'      => $request->username ?? null,
+            ];
+
+            if ($exception instanceof \PDOException) {
+                AppLogger::exception($exception, 'database_exception', $context);
+            } else {
+                AppLogger::exception($exception, 'system_exception', $context);
+            }
+        }
+
         parent::report($exception);
     }
 
     public function render($request, Throwable $e): Response
     {
+        $requestId = $request->request_id ?? ($GLOBALS['_request_id'] ?? '');
+
         if ($e instanceof ValidateException) {
             return json([
-                'code'    => 422,
-                'message' => $e->getError(),
-                'data'    => [],
+                'code'        => 422,
+                'message'     => $e->getError(),
+                'data'        => [],
+                'request_id'  => $requestId,
             ]);
         }
 
@@ -40,17 +62,19 @@ class ExceptionHandle extends Handle
             $statusCode = $e->getStatusCode();
             $message = $this->getHttpMessage($statusCode);
             return json([
-                'code'    => $statusCode,
-                'message' => $message,
-                'data'    => [],
+                'code'        => $statusCode,
+                'message'     => $message,
+                'data'        => [],
+                'request_id'  => $requestId,
             ], $statusCode);
         }
 
         if ($e instanceof ModelNotFoundException || $e instanceof DataNotFoundException) {
             return json([
-                'code'    => 404,
-                'message' => '数据不存在',
-                'data'    => [],
+                'code'        => 404,
+                'message'     => '数据不存在',
+                'data'        => [],
+                'request_id'  => $requestId,
             ], 404);
         }
 
@@ -58,25 +82,25 @@ class ExceptionHandle extends Handle
             $errorCode = $e->getCode();
             if ($errorCode == 23000) {
                 return json([
-                    'code'    => 400,
-                    'message' => '数据存在关联，无法执行此操作',
-                    'data'    => [],
+                    'code'        => 400,
+                    'message'     => '数据存在关联，无法执行此操作',
+                    'data'        => [],
+                    'request_id'  => $requestId,
                 ]);
             }
-            \think\facade\Log::error('Database Error: ' . $e->getMessage());
             return json([
-                'code'    => 500,
-                'message' => '数据库操作异常，请稍后重试',
-                'data'    => [],
+                'code'        => 500,
+                'message'     => '数据库操作异常，请稍后重试',
+                'data'        => [],
+                'request_id'  => $requestId,
             ]);
         }
 
-        \think\facade\Log::error('System Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-
         return json([
-            'code'    => 500,
-            'message' => '服务器内部错误，请稍后重试',
-            'data'    => [],
+            'code'        => 500,
+            'message'     => '服务器内部错误，请稍后重试',
+            'data'        => [],
+            'request_id'  => $requestId,
         ]);
     }
 

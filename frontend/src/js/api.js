@@ -2,6 +2,16 @@ const API_BASE = '/api';
 
 const recentMessages = new Set();
 
+function getLastRequestId() {
+    return localStorage.getItem('last_request_id') || '';
+}
+
+function setLastRequestId(requestId) {
+    if (requestId) {
+        localStorage.setItem('last_request_id', requestId);
+    }
+}
+
 function showToast(message, type = 'info', duration = 3000) {
     if (recentMessages.has(message)) return;
     recentMessages.add(message);
@@ -26,6 +36,13 @@ function showToast(message, type = 'info', duration = 3000) {
         toast.classList.add('fade-out');
         setTimeout(() => toast.remove(), 300);
     }, duration);
+}
+
+function showErrorWithRequestId(message, requestId) {
+    const fullMessage = requestId
+        ? `${message}\n请求ID: ${requestId}`
+        : message;
+    showToast(fullMessage, 'error', 5000);
 }
 
 function getToken() {
@@ -60,10 +77,16 @@ function isAdmin() {
     return user && user.role === 'admin';
 }
 
+function generateClientRequestId() {
+    return 'cli_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+}
+
 async function apiRequest(url, options = {}) {
     const token = getToken();
+    const clientRequestId = generateClientRequestId();
     const headers = {
         'Content-Type': 'application/json',
+        'X-Request-Id': clientRequestId,
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...options.headers,
     };
@@ -79,21 +102,32 @@ async function apiRequest(url, options = {}) {
             body: options.body instanceof FormData ? options.body : (options.body ? JSON.stringify(options.body) : undefined),
         });
 
+        const serverRequestId = response.headers.get('X-Request-Id');
+        if (serverRequestId) {
+            setLastRequestId(serverRequestId);
+        }
+
         if (response.status === 401) {
             removeToken();
             showToast('登录已过期，请重新登录', 'warning');
             setTimeout(() => { window.location.hash = '#/login'; }, 1000);
             const error = new Error('登录已过期，请重新登录');
             error._isBusinessError = true;
+            error.requestId = serverRequestId || clientRequestId;
             throw error;
         }
 
         const data = await response.json();
 
+        if (data.request_id) {
+            setLastRequestId(data.request_id);
+        }
+
         if (data.code !== 200) {
-            showToast(data.message || '操作失败', 'error');
+            showErrorWithRequestId(data.message || '操作失败', data.request_id || serverRequestId || clientRequestId);
             const error = new Error(data.message);
             error._isBusinessError = true;
+            error.requestId = data.request_id || serverRequestId || clientRequestId;
             throw error;
         }
 
@@ -101,8 +135,9 @@ async function apiRequest(url, options = {}) {
     } catch (error) {
         if (error._isBusinessError) throw error;
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            showToast('服务器连接失败，请稍后重试', 'error');
+            showErrorWithRequestId('服务器连接失败，请稍后重试', clientRequestId);
         }
+        error.requestId = error.requestId || clientRequestId;
         throw error;
     }
 }

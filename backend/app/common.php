@@ -3,21 +3,38 @@
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
+function get_current_request_id(): string
+{
+    $requestId = '';
+    if (function_exists('request')) {
+        $req = request();
+        if ($req && isset($req->request_id)) {
+            $requestId = $req->request_id;
+        }
+    }
+    if (empty($requestId) && isset($GLOBALS['_request_id'])) {
+        $requestId = $GLOBALS['_request_id'];
+    }
+    return $requestId;
+}
+
 function json_success($data = [], string $message = '操作成功', int $code = 200): \think\response\Json
 {
     return json([
-        'code'    => $code,
-        'message' => $message,
-        'data'    => $data,
+        'code'       => $code,
+        'message'    => $message,
+        'data'       => $data,
+        'request_id' => get_current_request_id(),
     ]);
 }
 
 function json_error(string $message = '操作失败', int $code = 400, $data = []): \think\response\Json
 {
     return json([
-        'code'    => $code,
-        'message' => $message,
-        'data'    => $data,
+        'code'       => $code,
+        'message'    => $message,
+        'data'       => $data,
+        'request_id' => get_current_request_id(),
     ]);
 }
 

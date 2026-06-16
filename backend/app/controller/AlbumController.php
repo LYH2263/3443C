@@ -8,7 +8,7 @@ use app\model\AlbumCategory;
 use app\model\AccessLog;
 use app\model\MemberLevel;
 use app\model\User;
-use think\facade\Log;
+use app\log\AppLogger;
 use think\facade\Validate;
 use think\Request;
 
@@ -244,7 +244,11 @@ class AlbumController
         $album->creator_id = $request->uid;
         $album->save();
 
-        Log::info("创建画册: {$album->title} (ID: {$album->id}) by user {$request->uid}");
+        AppLogger::info('album_create', '画册创建成功', [
+            'album_id'    => $album->id,
+            'album_title' => $album->title,
+            'creator_id'  => $request->uid,
+        ]);
 
         return json_success($album, '画册创建成功');
     }
@@ -277,7 +281,11 @@ class AlbumController
 
         $album->save();
 
-        Log::info("更新画册: {$album->title} (ID: {$album->id}) by user {$request->uid}");
+        AppLogger::info('album_update', '画册更新成功', [
+            'album_id'    => $album->id,
+            'album_title' => $album->title,
+            'operator_id' => $request->uid,
+        ]);
 
         return json_success($album, '画册更新成功');
     }
@@ -299,7 +307,11 @@ class AlbumController
         $title = $album->title;
         $album->delete();
 
-        Log::info("删除画册: {$title} (ID: {$id}) by user {$request->uid}");
+        AppLogger::info('album_delete', '画册删除成功', [
+            'album_id'    => $id,
+            'album_title' => $title,
+            'operator_id' => $request->uid,
+        ]);
 
         return json_success([], '画册删除成功');
     }
