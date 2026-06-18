@@ -40,7 +40,7 @@ WORKDIR /var/www/html
 # Copy composer.json and install all dependencies in one step
 COPY composer.json /var/www/html/composer.json
 COPY think /var/www/html/think
-RUN composer install --no-interaction --no-scripts --prefer-dist --no-security-blocking
+RUN composer install --no-interaction --no-scripts --prefer-dist --no-security-blocking --no-dev
 
 # Copy application code
 COPY app/ /var/www/html/app/
